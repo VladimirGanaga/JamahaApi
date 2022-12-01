@@ -26,6 +26,7 @@ public partial class Partsdatacollection
     public string? RefNo { get; set; }
 
     public string? Chapter { get; set; }
+    public string? chapterID { get; set; }
 
     public virtual Modeldatacollection Modeldatacollection { get; set; } = null!;
 }

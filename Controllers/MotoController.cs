@@ -1,9 +1,9 @@
-﻿using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.OData.Query;
-using Microsoft.AspNetCore.OData.Routing.Controllers;
+﻿using Microsoft.AspNetCore.Mvc;
 using JamahaApi.Models;
-
+using Newtonsoft.Json;
+using System.Net;
+using System.Text;
+using System.Collections.Immutable;
 
 namespace JamahaApi.Controllers
 {
@@ -11,17 +11,54 @@ namespace JamahaApi.Controllers
     [ApiController]
     public class MotoController : ControllerBase
     {
-      
-        [HttpGet]
-        public IQueryable Get()
-        {
-            //return YamahaContext.Modeldatacollections.AsQueryable();
-            //return BadRequest(ModelState);
-        }
 
-        /// <summary>
-        /// Create a new movie
-        /// </summary>
+        YamahaContext context=new YamahaContext();
+
+
+        [HttpGet]
+        public string Get(string ModelName, string ChapterID)
+        {
+            var chapterID = ChapterID;
+            if (int.Parse(ChapterID) < 10)
+            {
+                chapterID = "0" + ChapterID;
+            }
+
+            List <List<Partsdatacollection>> chekListAll = new List<List<Partsdatacollection>>();
+            YamahaContext ctx = new YamahaContext();
+            var desiredModelsFromBase = ctx.Modeldatacollection.Where(dm => dm.ModelName == ModelName);
+            foreach (Modeldatacollection dm in desiredModelsFromBase)
+            {
+                List<Partsdatacollection> chekList = new List<Partsdatacollection>();
+                var PartsFromBase = context.Partsdatacollection.Where(pfb => pfb.ModeldatacollectionId == dm.Id && pfb.chapterID == chapterID);
+                foreach (var part in PartsFromBase)
+                {
+                    chekList.Add(part);
+
+                }
+                chekListAll.Add(chekList);
+
+            }
+
+            var jsonSettings = new JsonSerializerSettings
+            {
+                NullValueHandling = NullValueHandling.Ignore
+            };
+            var answer = JsonConvert.SerializeObject(chekListAll, jsonSettings);
+            
+
+            if ((string.IsNullOrEmpty(answer.ToString())) || (answer.ToString()=="[]"))
+            {
+                return "Model not found";
+            }
+            return answer.ToString();
+
+            
+        }
+        
+
+
+
         [HttpPost]
         public async Task<IActionResult> Post([FromBody] Modeldatacollection modeldatacollection)
         {
@@ -30,15 +67,15 @@ namespace JamahaApi.Controllers
                    }
 
         
-        [HttpPut("{movieId:int}")]
-        public IActionResult Update(int movieId, [FromBody] Modeldatacollection modeldatacollection)
+        [HttpPut("{ModelID:int}")]
+        public IActionResult Update(int ModelID, [FromBody] Modeldatacollection modeldatacollection)
         {
            
                 return BadRequest(ModelState);
                 }
 
-        [HttpDelete("{movieId:int}")]
-        public IActionResult Delete(int movieId)
+        [HttpDelete("{ModelID:int}")]
+        public IActionResult Delete(int ModelID)
         {
             
             return NoContent();
