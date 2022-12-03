@@ -4,6 +4,7 @@ using Newtonsoft.Json;
 using System.Net;
 using System.Text;
 using System.Collections.Immutable;
+using JamahaApi.Models;
 
 namespace JamahaApi.Controllers
 {
@@ -12,74 +13,87 @@ namespace JamahaApi.Controllers
     public class MotoController : ControllerBase
     {
 
-        YamahaContext context=new YamahaContext();
+        
 
 
         [HttpGet]
         public string Get(string ModelName, string ChapterID)
         {
-            var chapterID = ChapterID;
-            if (int.Parse(ChapterID) < 10)
-            {
-                chapterID = "0" + ChapterID;
-            }
-
-            List <List<Partsdatacollection>> chekListAll = new List<List<Partsdatacollection>>();
-            YamahaContext ctx = new YamahaContext();
-            var desiredModelsFromBase = ctx.Modeldatacollection.Where(dm => dm.ModelName == ModelName);
-            foreach (Modeldatacollection dm in desiredModelsFromBase)
-            {
-                List<Partsdatacollection> chekList = new List<Partsdatacollection>();
-                var PartsFromBase = context.Partsdatacollection.Where(pfb => pfb.ModeldatacollectionId == dm.Id && pfb.chapterID == chapterID);
-                foreach (var part in PartsFromBase)
-                {
-                    chekList.Add(part);
-
-                }
-                chekListAll.Add(chekList);
-
-            }
-
             var jsonSettings = new JsonSerializerSettings
             {
                 NullValueHandling = NullValueHandling.Ignore
             };
-            var answer = JsonConvert.SerializeObject(chekListAll, jsonSettings);
             
+            var chapterID = int.Parse(ChapterID);
+            string answer = "{";
+            int count = 0;
+            YamahaContext contextModels = new YamahaContext();
+            List<PartsDB> chekListParts = new List<PartsDB>();
+            
+            var desiredModelsFromBase = contextModels.ModelDB.Where(dm => dm.modelName == ModelName);
+            foreach (ModelsDB dm in desiredModelsFromBase)
+            {
+                YamahaContext contextChapter = new YamahaContext();
+                answer += $"\"ModelID{dm.Id}\": "+ JsonConvert.SerializeObject(dm, jsonSettings)+",";
 
-            if ((string.IsNullOrEmpty(answer.ToString())) || (answer.ToString()=="[]"))
+                var ChapterFromBase = contextChapter.ChapterDB.Where(cfb => cfb.ModelsDBID == dm.Id && cfb.chapterID == String.Format("{0:D2}", chapterID));
+                foreach (var chapters in ChapterFromBase)
+                {
+                    answer += $"\"chapterID{chapters.Id}\": " + JsonConvert.SerializeObject(chapters, jsonSettings) + ",";
+                    YamahaContext contextParts = new YamahaContext();
+                    var partsFromBase = contextParts.PartDB.Where(pfb => pfb.chapterID == chapters.Id );
+                    foreach (var parts in partsFromBase)
+                    {
+                        chekListParts.Add(parts);
+                        count++;
+                    }
+                    contextParts.Dispose();
+                    answer += $"\"partsForChapterID{chapters.Id}\": " + JsonConvert.SerializeObject(chekListParts, jsonSettings) + ",";
+                    chekListParts.Clear();
+                }
+                contextChapter.Dispose();
+
+            }
+            contextModels.Dispose();
+            answer += $"\"totalPartsInList\": {count}}}";
+
+
+           //var answer = JsonConvert.SerializeObject(chekListParts, jsonSettings);
+
+
+            if ((string.IsNullOrEmpty(answer.ToString())) || (answer.ToString() == "[]"))
             {
                 return "Model not found";
             }
             return answer.ToString();
 
-            
+
         }
-        
 
 
 
-        [HttpPost]
-        public async Task<IActionResult> Post([FromBody] Modeldatacollection modeldatacollection)
-        {
-            
-                return BadRequest(ModelState);
-                   }
 
-        
-        [HttpPut("{ModelID:int}")]
-        public IActionResult Update(int ModelID, [FromBody] Modeldatacollection modeldatacollection)
-        {
-           
-                return BadRequest(ModelState);
-                }
+        //[HttpPost]
+        //public async Task<IActionResult> Post([FromBody] Modeldatacollection modeldatacollection)
+        //{
 
-        [HttpDelete("{ModelID:int}")]
-        public IActionResult Delete(int ModelID)
-        {
-            
-            return NoContent();
-        }
+        //    return BadRequest(ModelState);
+        //}
+
+
+        //[HttpPut("{ModelID:int}")]
+        //public IActionResult Update(int ModelID, [FromBody] Modeldatacollection modeldatacollection)
+        //{
+
+        //    return BadRequest(ModelState);
+        //}
+
+        //[HttpDelete("{ModelID:int}")]
+        //public IActionResult Delete(int ModelID)
+        //{
+
+        //    return NoContent();
+        //}
 
     }
 }
